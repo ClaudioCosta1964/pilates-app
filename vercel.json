@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "buildCommand": "",
+  "installCommand": "npm install",
+  "outputDirectory": "",
+  "framework": null,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/server.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
+
+
+
+
+
+
+
+
