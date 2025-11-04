@@ -437,8 +437,36 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'Servidor do Aplicativo Pilates funcionando!',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    firebase: db ? 'Conectado' : 'Desconectado',
+    environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Rota de diagnóstico
+app.get('/api/diagnostico', (req, res) => {
+  const diagnostico = {
+    servidor: 'OK',
+    firebase: {
+      inicializado: !!db,
+      projectId: process.env.FIREBASE_PROJECT_ID ? 'Configurado' : 'Não configurado',
+      privateKey: process.env.FIREBASE_PRIVATE_KEY ? 'Configurado' : 'Não configurado',
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL ? 'Configurado' : 'Não configurado'
+    },
+    variaveis: {
+      FIREBASE_PROJECT_ID: !!process.env.FIREBASE_PROJECT_ID,
+      FIREBASE_PRIVATE_KEY_ID: !!process.env.FIREBASE_PRIVATE_KEY_ID,
+      FIREBASE_PRIVATE_KEY: !!process.env.FIREBASE_PRIVATE_KEY,
+      FIREBASE_CLIENT_EMAIL: !!process.env.FIREBASE_CLIENT_EMAIL,
+      FIREBASE_CLIENT_ID: !!process.env.FIREBASE_CLIENT_ID,
+      FIREBASE_AUTH_URI: !!process.env.FIREBASE_AUTH_URI,
+      FIREBASE_TOKEN_URI: !!process.env.FIREBASE_TOKEN_URI,
+      NODE_ENV: !!process.env.NODE_ENV
+    },
+    timestamp: new Date().toISOString()
+  };
+  
+  res.json(diagnostico);
 });
 
 // Iniciar servidor apenas se não estiver no Vercel
