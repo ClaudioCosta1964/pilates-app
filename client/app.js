@@ -51,7 +51,22 @@ async function carregarDados() {
     try {
         // Carregar estatísticas
         const response = await fetch(`${API_BASE_URL}/alunos`);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+            console.error('Erro na resposta:', errorData);
+            mostrarNotificacao(`Erro ao carregar dados: ${errorData.error || response.statusText}`, 'error');
+            return;
+        }
+        
         const alunosData = await response.json();
+        
+        // Verificar se é array
+        if (!Array.isArray(alunosData)) {
+            console.error('Resposta inválida:', alunosData);
+            mostrarNotificacao('Erro: dados recebidos em formato inválido', 'error');
+            return;
+        }
         
         const alunosAtivos = alunosData.filter(aluno => aluno.status === 'ativo');
         
@@ -67,7 +82,7 @@ async function carregarDados() {
         
     } catch (error) {
         console.error('Erro ao carregar dados:', error);
-        mostrarNotificacao('Erro ao carregar dados do dashboard', 'error');
+        mostrarNotificacao(`Erro ao carregar dados: ${error.message}`, 'error');
     }
 }
 

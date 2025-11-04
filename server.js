@@ -122,6 +122,10 @@ app.get('/api/alunos', async (req, res) => {
 // Buscar aluno por ID
 app.get('/api/alunos/:id', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const doc = await db.collection('alunos').doc(req.params.id).get();
     
     if (!doc.exists) {
@@ -138,6 +142,10 @@ app.get('/api/alunos/:id', async (req, res) => {
 // Atualizar dados do aluno
 app.put('/api/alunos/:id', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const alunoId = req.params.id;
     const updateData = {
       ...req.body,
@@ -163,6 +171,10 @@ app.put('/api/alunos/:id', async (req, res) => {
 // Registrar pagamento
 app.post('/api/pagamentos', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const { alunoId, valor, dataVencimento, plano = 'mensal', metodoPagamento = 'dinheiro' } = req.body;
     
     if (!alunoId || !valor || !dataVencimento) {
@@ -196,6 +208,10 @@ app.post('/api/pagamentos', async (req, res) => {
 // Listar pagamentos de um aluno
 app.get('/api/alunos/:id/pagamentos', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const alunoId = req.params.id;
     const snapshot = await db.collection('pagamentos')
       .where('alunoId', '==', alunoId)
@@ -219,6 +235,10 @@ app.get('/api/alunos/:id/pagamentos', async (req, res) => {
 // Listar exercícios disponíveis
 app.get('/api/exercicios', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const snapshot = await db.collection('exercicios').get();
     const exercicios = [];
     
@@ -236,6 +256,10 @@ app.get('/api/exercicios', async (req, res) => {
 // Registrar exercício realizado pelo aluno
 app.post('/api/exercicios/registrar', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const { alunoId, exercicioId, duracao, observacoes } = req.body;
     
     if (!alunoId || !exercicioId) {
@@ -268,6 +292,10 @@ app.post('/api/exercicios/registrar', async (req, res) => {
 // Função para verificar aniversariantes e enviar parabéns
 app.post('/api/verificar-aniversarios', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const hoje = moment().format('MM-DD');
     const snapshot = await db.collection('alunos').get();
     const aniversariantes = [];
@@ -341,6 +369,10 @@ async function enviarParabensAniversario(aluno) {
 // Relatório de alunos por nível
 app.get('/api/relatorios/alunos-por-nivel', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const snapshot = await db.collection('alunos').get();
     const relatorio = {
       iniciante: 0,
@@ -367,6 +399,10 @@ app.get('/api/relatorios/alunos-por-nivel', async (req, res) => {
 // Relatório de pagamentos em atraso
 app.get('/api/relatorios/pagamentos-atrasados', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const hoje = admin.firestore.Timestamp.now();
     const snapshot = await db.collection('pagamentos')
       .where('dataVencimento', '<', hoje)
