@@ -387,7 +387,13 @@ app.get('/api/relatorios/pagamentos-atrasados', async (req, res) => {
 
 // Rota principal - servir a página inicial
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/client/index.html');
+  try {
+    const path = require('path');
+    res.sendFile(path.join(__dirname, 'client', 'index.html'));
+  } catch (error) {
+    console.error('Erro ao servir página inicial:', error);
+    res.status(500).send('Erro ao carregar página');
+  }
 });
 
 // Rota de teste
