@@ -497,6 +497,16 @@ app.get('/api/diagnostico', (req, res) => {
   res.json(diagnostico);
 });
 
+// Handler de erro global para evitar crashes
+app.use((err, req, res, next) => {
+  console.error('❌ Erro não tratado:', err.message);
+  console.error('Stack:', err.stack);
+  res.status(500).json({ 
+    error: 'Erro interno do servidor',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
 // Iniciar servidor apenas se não estiver no Vercel
 // No Vercel, o servidor é executado como serverless function
 if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
@@ -506,6 +516,7 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
   });
 } else {
   console.log('✅ Servidor configurado para Vercel (serverless)');
+  console.log('✅ Firebase status:', db ? 'Conectado' : 'Desconectado');
 }
 
 // Exportar para Vercel (serverless function)
