@@ -1,92 +1,94 @@
-const express = require('express');
-const cors = require('cors');
-const admin = require('firebase-admin');
-const moment = require('moment');
-const nodemailer = require('nodemailer');
-require('dotenv').config();
-
-// Log inicial para debug
-console.log('🚀 Iniciando servidor...');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('VERCEL:', process.env.VERCEL);
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.static('client')); // Servir arquivos estáticos da pasta client
-
-// Inicializar Firebase Admin
-let db;
+// Wrapper de segurança para evitar crashes
 try {
-  if (!admin.apps.length) {
-    // Verificar se todas as variáveis estão presentes
-    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
-      console.error('❌ Variáveis do Firebase não configuradas!');
-      console.error('FIREBASE_PROJECT_ID:', !!process.env.FIREBASE_PROJECT_ID);
-      console.error('FIREBASE_PRIVATE_KEY:', !!process.env.FIREBASE_PRIVATE_KEY);
-      console.error('FIREBASE_CLIENT_EMAIL:', !!process.env.FIREBASE_CLIENT_EMAIL);
-    } else {
-      const serviceAccount = {
-        type: "service_account",
-        project_id: process.env.FIREBASE_PROJECT_ID,
-        private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        client_email: process.env.FIREBASE_CLIENT_EMAIL,
-        client_id: process.env.FIREBASE_CLIENT_ID,
-        auth_uri: process.env.FIREBASE_AUTH_URI || "https://accounts.google.com/o/oauth2/auth",
-        token_uri: process.env.FIREBASE_TOKEN_URI || "https://oauth2.googleapis.com/token"
-      };
+  const express = require('express');
+  const cors = require('cors');
+  const admin = require('firebase-admin');
+  const moment = require('moment');
+  const nodemailer = require('nodemailer');
+  require('dotenv').config();
 
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-      console.log('✅ Firebase inicializado com sucesso');
+  // Log inicial para debug
+  console.log('🚀 Iniciando servidor...');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('VERCEL:', process.env.VERCEL);
+
+  const app = express();
+  const PORT = process.env.PORT || 3000;
+
+  // Middleware
+  app.use(cors());
+  app.use(express.json());
+  app.use(express.static('client')); // Servir arquivos estáticos da pasta client
+
+  // Inicializar Firebase Admin
+  let db;
+  try {
+    if (!admin.apps.length) {
+      // Verificar se todas as variáveis estão presentes
+      if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+        console.error('❌ Variáveis do Firebase não configuradas!');
+        console.error('FIREBASE_PROJECT_ID:', !!process.env.FIREBASE_PROJECT_ID);
+        console.error('FIREBASE_PRIVATE_KEY:', !!process.env.FIREBASE_PRIVATE_KEY);
+        console.error('FIREBASE_CLIENT_EMAIL:', !!process.env.FIREBASE_CLIENT_EMAIL);
+      } else {
+        const serviceAccount = {
+          type: "service_account",
+          project_id: process.env.FIREBASE_PROJECT_ID,
+          private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+          private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          client_email: process.env.FIREBASE_CLIENT_EMAIL,
+          client_id: process.env.FIREBASE_CLIENT_ID,
+          auth_uri: process.env.FIREBASE_AUTH_URI || "https://accounts.google.com/o/oauth2/auth",
+          token_uri: process.env.FIREBASE_TOKEN_URI || "https://oauth2.googleapis.com/token"
+        };
+
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount)
+        });
+        console.log('✅ Firebase inicializado com sucesso');
+      }
     }
-  }
-  if (admin.apps.length > 0) {
-    db = admin.firestore();
-    console.log('✅ Firestore inicializado');
-  } else {
-    console.error('❌ Firebase não foi inicializado');
+    if (admin.apps.length > 0) {
+      db = admin.firestore();
+      console.log('✅ Firestore inicializado');
+    } else {
+      console.error('❌ Firebase não foi inicializado');
+      db = null;
+    }
+  } catch (error) {
+    console.error('❌ Erro ao inicializar Firebase:', error.message);
+    console.error('Stack:', error.stack);
     db = null;
   }
-} catch (error) {
-  console.error('❌ Erro ao inicializar Firebase:', error.message);
-  console.error('Stack:', error.stack);
-  db = null;
-}
 
-// Configuração do Nodemailer para envio de emails (opcional)
-let transporter = null;
-try {
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-    console.log('✅ Nodemailer configurado');
-  } else {
-    console.log('⚠️ Nodemailer não configurado (EMAIL_USER ou EMAIL_PASS faltando)');
-  }
-} catch (error) {
-  console.error('❌ Erro ao configurar Nodemailer:', error.message);
-  transporter = null;
-}
-
-// ===== ROTAS PARA ALUNOS =====
-
-// Cadastrar novo aluno
-app.post('/api/alunos', async (req, res) => {
+  // Configuração do Nodemailer para envio de emails (opcional)
+  let transporter = null;
   try {
-    if (!db) {
-      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      });
+      console.log('✅ Nodemailer configurado');
+    } else {
+      console.log('⚠️ Nodemailer não configurado (EMAIL_USER ou EMAIL_PASS faltando)');
     }
+  } catch (error) {
+    console.error('❌ Erro ao configurar Nodemailer:', error.message);
+    transporter = null;
+  }
+
+  // ===== ROTAS PARA ALUNOS =====
+
+  // Cadastrar novo aluno
+  app.post('/api/alunos', async (req, res) => {
+    try {
+      if (!db) {
+        return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+      }
     
     const { nome, telefone, email, dataNascimento, nivel = 'iniciante' } = req.body;
     
@@ -519,7 +521,26 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
   console.log('✅ Firebase status:', db ? 'Conectado' : 'Desconectado');
 }
 
-// Exportar para Vercel (serverless function)
-module.exports = app;
+  // Exportar para Vercel (serverless function)
+  module.exports = app;
+  
+} catch (error) {
+  // Se houver erro na inicialização, criar um servidor mínimo que sempre funciona
+  console.error('❌ ERRO CRÍTICO na inicialização:', error.message);
+  console.error('Stack:', error.stack);
+  
+  const express = require('express');
+  const app = express();
+  
+  app.use((req, res) => {
+    res.status(500).json({
+      error: 'Erro na inicialização do servidor',
+      message: 'Verifique os logs do Vercel para mais detalhes',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  });
+  
+  module.exports = app;
+}
 
 
