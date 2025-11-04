@@ -14,24 +14,38 @@ app.use(express.json());
 app.use(express.static('client')); // Servir arquivos estáticos da pasta client
 
 // Inicializar Firebase Admin
-if (!admin.apps.length) {
-  const serviceAccount = {
-    type: "service_account",
-    project_id: process.env.FIREBASE_PROJECT_ID,
-    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-    private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    client_email: process.env.FIREBASE_CLIENT_EMAIL,
-    client_id: process.env.FIREBASE_CLIENT_ID,
-    auth_uri: process.env.FIREBASE_AUTH_URI,
-    token_uri: process.env.FIREBASE_TOKEN_URI
-  };
+let db;
+try {
+  if (!admin.apps.length) {
+    // Verificar se todas as variáveis estão presentes
+    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+      console.error('❌ Variáveis do Firebase não configuradas!');
+      console.error('FIREBASE_PROJECT_ID:', !!process.env.FIREBASE_PROJECT_ID);
+      console.error('FIREBASE_PRIVATE_KEY:', !!process.env.FIREBASE_PRIVATE_KEY);
+      console.error('FIREBASE_CLIENT_EMAIL:', !!process.env.FIREBASE_CLIENT_EMAIL);
+    } else {
+      const serviceAccount = {
+        type: "service_account",
+        project_id: process.env.FIREBASE_PROJECT_ID,
+        private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        client_id: process.env.FIREBASE_CLIENT_ID,
+        auth_uri: process.env.FIREBASE_AUTH_URI || "https://accounts.google.com/o/oauth2/auth",
+        token_uri: process.env.FIREBASE_TOKEN_URI || "https://oauth2.googleapis.com/token"
+      };
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      console.log('✅ Firebase inicializado com sucesso');
+    }
+  }
+  db = admin.firestore();
+} catch (error) {
+  console.error('❌ Erro ao inicializar Firebase:', error);
+  db = null;
 }
-
-const db = admin.firestore();
 
 // Configuração do Nodemailer para envio de emails
 const transporter = nodemailer.createTransport({
@@ -47,6 +61,10 @@ const transporter = nodemailer.createTransport({
 // Cadastrar novo aluno
 app.post('/api/alunos', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const { nome, telefone, email, dataNascimento, nivel = 'iniciante' } = req.body;
     
     // Validar campos obrigatórios
@@ -83,6 +101,10 @@ app.post('/api/alunos', async (req, res) => {
 // Listar todos os alunos
 app.get('/api/alunos', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: 'Firebase não inicializado. Verifique as variáveis de ambiente.' });
+    }
+    
     const snapshot = await db.collection('alunos').get();
     const alunos = [];
     
@@ -377,12 +399,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📱 Aplicativo Pilates - API disponível em http://localhost:${PORT}`);
-});
+// Iniciar servidor apenas se não estiver no Vercel
+// No Vercel, o servidor é executado como serverless function
+if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+  app.listen(PORT || 3000, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT || 3000}`);
+    console.log(`📱 Aplicativo Pilates - API disponível em http://localhost:${PORT || 3000}`);
+  });
+} else {
+  console.log('✅ Servidor configurado para Vercel (serverless)');
+}
 
+// Exportar para Vercel (serverless function)
 module.exports = app;
 
 
