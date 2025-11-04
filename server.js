@@ -5,6 +5,11 @@ const moment = require('moment');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+// Log inicial para debug
+console.log('🚀 Iniciando servidor...');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('VERCEL:', process.env.VERCEL);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -41,20 +46,38 @@ try {
       console.log('✅ Firebase inicializado com sucesso');
     }
   }
-  db = admin.firestore();
+  if (admin.apps.length > 0) {
+    db = admin.firestore();
+    console.log('✅ Firestore inicializado');
+  } else {
+    console.error('❌ Firebase não foi inicializado');
+    db = null;
+  }
 } catch (error) {
-  console.error('❌ Erro ao inicializar Firebase:', error);
+  console.error('❌ Erro ao inicializar Firebase:', error.message);
+  console.error('Stack:', error.stack);
   db = null;
 }
 
-// Configuração do Nodemailer para envio de emails
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+// Configuração do Nodemailer para envio de emails (opcional)
+let transporter = null;
+try {
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    console.log('✅ Nodemailer configurado');
+  } else {
+    console.log('⚠️ Nodemailer não configurado (EMAIL_USER ou EMAIL_PASS faltando)');
   }
-});
+} catch (error) {
+  console.error('❌ Erro ao configurar Nodemailer:', error.message);
+  transporter = null;
+}
 
 // ===== ROTAS PARA ALUNOS =====
 
@@ -342,20 +365,25 @@ async function enviarParabensAniversario(aluno) {
     });
 
     // Enviar email (opcional)
-    if (aluno.email) {
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: aluno.email,
-        subject: '🎉 Feliz Aniversário! - Studio Pilates',
-        html: `
-          <h2>Feliz Aniversário, ${aluno.nome}!</h2>
-          <p>Que este novo ano de vida seja repleto de saúde, bem-estar e muitas conquistas no Pilates!</p>
-          <p>Continue cuidando do seu corpo e mente através da prática do Pilates.</p>
-          <p>Com carinho,<br>Equipe do Studio Pilates</p>
-        `
-      };
+    if (aluno.email && transporter) {
+      try {
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: aluno.email,
+          subject: '🎉 Feliz Aniversário! - Studio Pilates',
+          html: `
+            <h2>Feliz Aniversário, ${aluno.nome}!</h2>
+            <p>Que este novo ano de vida seja repleto de saúde, bem-estar e muitas conquistas no Pilates!</p>
+            <p>Continue cuidando do seu corpo e mente através da prática do Pilates.</p>
+            <p>Com carinho,<br>Equipe do Studio Pilates</p>
+          `
+        };
 
-      await transporter.sendMail(mailOptions);
+        await transporter.sendMail(mailOptions);
+      } catch (emailError) {
+        console.error(`Erro ao enviar email para ${aluno.nome}:`, emailError.message);
+        // Não falha se o email não puder ser enviado
+      }
     }
     
     console.log(`Parabéns enviado para ${aluno.nome}`);
